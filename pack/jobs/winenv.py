@@ -302,7 +302,7 @@ class NativeProbe:
             if os.name == "nt":
                 root, fs = ctypes.create_unicode_buffer(1024), ctypes.create_unicode_buffer(64)
                 k32 = ctypes.windll.kernel32
-                if k32.GetVolumePathNameW(ctypes.c_wchar_p(str(path)), root, 1024) and k32.GetVolumeInformationW(root, None, 0, None, None, None, fs, 64):
+                if k32.GetVolumePathNameW(ctypes.c_wchar_p(_long_path()(str(path))), root, 1024) and k32.GetVolumeInformationW(root, None, 0, None, None, None, fs, 64):
                     fmt = fs.value.strip().lower()
             return {"format": fmt, "home": str(Path.home()), "env": {v: os.environ[v] for _, v in libloc.WIN_CLOUD_ENV if os.environ.get(v)}}
         if kind == "disk":
@@ -469,6 +469,15 @@ class RecoveryContractError(ValueError):
 
 
 @functools.lru_cache(maxsize=1)
+@functools.lru_cache(maxsize=1)
+def _long_path():
+    """pack/orch/winlong.long_path：>240 字符的路径给 Win32 前先加 \\\\?\\（按路径加载，不依赖 sys.path）"""
+    spec = importlib.util.spec_from_file_location("_s2a_winenv_winlong", ROOT / "pack/orch/winlong.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module.long_path
+
+
 def _libloc():
     """游戏库位置判法（pack/jobs/libloc.py，与 Mac 预检同一份纯函数）；按路径加载，不依赖 sys.path"""
     spec = importlib.util.spec_from_file_location("_s2a_winenv_libloc", ROOT / "pack/jobs/libloc.py")

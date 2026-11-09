@@ -25,6 +25,23 @@ _jobs = {}
 _jobs_lock = threading.RLock()
 
 
+def win_path(path):
+    """直接调 Win32 的路径参数一律过这里：>240 字符加 \\\\?\\ 前缀（规则同 pack/orch/winlong.long_path；注册表 LongPathsEnabled 关着、
+    进程清单又没声明 longPathAware 时，裸长路径会得 WinError 3 / 123，v0.1.6 玩家 C:\\tool\\game 播种报 roots.py _win_acl 123）。
+    作业层按文件路径装 winlong，不依赖 pack 包在 sys.path 上。"""
+    global _long_path
+    if _long_path is None:
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("s2a_winlong_jobs", Path(__file__).resolve().parents[1] / "orch" / "winlong.py")
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        _long_path = module.long_path
+    return _long_path(path)
+
+
+_long_path = None
+
+
 def _api(dll, name, result, *args):
     library = C.WinDLL(dll, use_last_error=True)
     function = getattr(library, name)
@@ -511,7 +528,7 @@ def open_dir_nofollow(path, parent=None, *, directory=True, security=False):
     absolute = Path(os.path.abspath(path))
     if not absolute.anchor or str(absolute).startswith('\\\\'):
         raise OSError(errno.EINVAL, 'UNC/device paths not accepted by this adapter')
-    handle = _api('kernel32', 'CreateFileW', W.HANDLE, W.LPCWSTR, W.DWORD,
+    handle = _api('kernel32', 'CreateFileW', W.HANDLE, W.LPCWSTR, W.DWORD,   # lp-exempt: 只传卷根（absolute.anchor），其下逐级用相对句柄打开
                   W.DWORD, C.c_void_p, W.DWORD, W.DWORD, W.HANDLE)(
                       absolute.anchor, 0x100081, 3, None, 3, 0x02200000, None)
     if handle == C.c_void_p(-1).value:

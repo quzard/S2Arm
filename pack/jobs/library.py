@@ -277,7 +277,7 @@ def _win_volume_format(path):
         import ctypes
         k32 = ctypes.windll.kernel32
         root = ctypes.create_unicode_buffer(1024)
-        if not k32.GetVolumePathNameW(ctypes.c_wchar_p(path), root, 1024):
+        if not k32.GetVolumePathNameW(ctypes.c_wchar_p(winproc.win_path(path)), root, 1024):
             return ""
         fs = ctypes.create_unicode_buffer(64)
         if not k32.GetVolumeInformationW(root, None, 0, None, None, None, fs, 64):
