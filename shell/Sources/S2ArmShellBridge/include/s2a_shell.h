@@ -30,6 +30,8 @@ void *s2a_shell_library_vc(const char *catalogue_json_path);
 //     实现在宿主 ios/app.m（按 Documents/games/<游戏号> 跑 pack_apply.c 同一判据）；本包 s2a_shell.c 里弱定义缺省 1（Swift 单测不链宿主）
 //   s2a_shell_pick_game_data：库里点「需要游戏数据」那款 → 宿主给导入说明（含「重新检查」）；弱定义缺省只记日志
 int s2a_shell_game_data_ready(const char *game_id);
+// 库界面第一次出现（启动打点「游戏库界面可操作」）；弱定义缺省什么都不做
+void s2a_shell_library_appeared(void);
 void s2a_shell_pick_game_data(const char *game_id);
 // 宿主让库界面重判各款资源包（说明里「重新检查」后调）。库界面建好时登记；没登记时 s2a_shell_refresh 什么都不做
 typedef void (*s2a_shell_refresh_fn)(void *ctx);

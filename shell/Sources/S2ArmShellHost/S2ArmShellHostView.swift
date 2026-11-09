@@ -9,7 +9,7 @@ public struct S2ArmShellHostView: View {
     public var body: some View {
         LibraryView(games: model.games, controllers: model.controllers, actions: model.actions, input: model.input,
                     padSnapshot: model.padSnapshot)
-            .onAppear { model.startControllers() }
+            .onAppear { model.startControllers(); s2a_shell_library_appeared() }
             .onDisappear { model.stopControllers() }
         #if canImport(UIKit)
             // 回前台重判资源包：玩家去「文件」/ 访达拷完资源包回来，不用重开 App

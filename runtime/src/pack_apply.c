@@ -361,6 +361,18 @@ int s2a_import_state_game(const char *proc_docs, const char *gid) {
     snprintf(docs, sizeof docs, "%s/games/%s", proc_docs, gid);
     return s2a_import_state(docs);
 }
+// 游戏库快判：解包成功时写的 .applied 等于当前清单 = 这份已核对过每个文件，直接算就绪。
+//   库界面在主线程、每次回前台都判，逐文件 stat 一款 10 万文件的游戏要 2.5 秒以上（冷缓存更久，玩家「每次打开都要等」）；
+//   完整核对仍在点 Play 后的导入闸门（s2a_import_state）做
+int s2a_import_state_game_quick(const char *proc_docs, const char *gid) {
+    if (proc_docs && *proc_docs && gid && *gid && !strchr(gid, '/') && gid[0] != '.') {
+        char mf[2200], ap[2200], want[200], got[200] = ""; snprintf(mf, sizeof mf, "%s/games/%s/资源包/manifest.json", proc_docs, gid); snprintf(ap, sizeof ap, "%s/games/%s/资源包/.applied", proc_docs, gid);
+        FILE *f = fopen(ap, "r");
+        if (f) { size_t k = fread(got, 1, sizeof got - 1, f); fclose(f); got[k] = 0; got[strcspn(got, "\r\n")] = 0; }
+        if (got[0] && !manifest_sha(mf, want, sizeof want) && !strcmp(got, want)) return S2A_IMPORT_READY;
+    }
+    return s2a_import_state_game(proc_docs, gid);
+}
 #if defined(__APPLE__) && TARGET_OS_IPHONE
 #include <CoreFoundation/CoreFoundation.h>
 #include <pthread.h>

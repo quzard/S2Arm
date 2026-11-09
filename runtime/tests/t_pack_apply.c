@@ -17,6 +17,7 @@
 #endif
 int s2a_pack_apply(const char *docs); int s2a_untar(const char *tar, const char *root, unsigned *nf, uint64_t *nb);
 int s2a_import_docs_pick(const s2a_launch_ctx *c, int game_data_env, const char *proc_docs, char *out, size_t n); int s2a_import_state_game(const char *proc_docs, const char *gid);
+int s2a_import_state_game_quick(const char *proc_docs, const char *gid);
 int s2a_import_state(const char *docs); void s2a_pack_help_detail(int st, int again, char *d, size_t n); extern void (*s2a_pack_apply_progress)(int done, int total);
 // 与 runtime/src/pack_apply.c 同（闸门下一步与指纹记录）
 enum { S2A_GATE_READY, S2A_GATE_IMPORT, S2A_GATE_SETTLE, S2A_GATE_WAIT, S2A_GATE_STALLED, S2A_GATE_NONE, S2A_GATE_BROKEN };
@@ -279,6 +280,16 @@ int main(void) {
         CHECK(s2a_import_state_game(NULL, "0100FD70134FA000") == 2 && s2a_import_state_game(pd, "../x") == 2 && s2a_import_state_game(pd, ".hid") == 2 && s2a_import_state_game(pd, "") == 2, "不合规游戏号 → 按没有资源");
         snprintf(cmd, sizeof cmd, "rm %s/Documents/games/0100FD70134FA000/资源包/exefs/main.npdm", h); sh(cmd);
         CHECK(s2a_import_state_game(pd, "0100FD70134FA000") == 3, "缺 main.npdm（Duo 那种没导完）→ S2A_IMPORT_BROKEN(3)");
+        // 库界面快判：.applied 等于清单的 index_sha256 就不逐文件核（主线程上 10 万文件要几秒）；不等 / 没有 .applied 退回完整核对；非法游戏号同完整判据
+        { char qc[4096], qr[2300]; snprintf(qr, sizeof qr, "%s/games/0100FD70134FA000/资源包", pd);
+          snprintf(qc, sizeof qc, "printf '{\"version\":2,\"index_sha256\":\"abc123\"}' > '%s/manifest.json' && printf 'abc123' > '%s/.applied'", qr, qr); CHECK(sh(qc) == 0, "造快判夹具失败");
+          CHECK(s2a_import_state_game_quick(pd, "0100FD70134FA000") == 0, "快判：.applied 等于清单 → 就绪(0)，不逐文件核");
+          CHECK(s2a_import_state_game(pd, "0100FD70134FA000") == 3, "完整判据不受影响：照旧查出缺文件(3)");
+          snprintf(qc, sizeof qc, "printf 'other' > '%s/.applied'", qr); sh(qc);
+          CHECK(s2a_import_state_game_quick(pd, "0100FD70134FA000") == 3, "快判：.applied 不等于清单 → 退回完整核对(3)");
+          snprintf(qc, sizeof qc, "rm '%s/.applied'", qr); sh(qc);
+          CHECK(s2a_import_state_game_quick(pd, "0100FD70134FA000") == 3, "快判：没有 .applied → 退回完整核对(3)");
+          CHECK(s2a_import_state_game_quick(pd, "../x") == 2, "快判：非法游戏号 → 没有资源(2)"); }
     }
     printf("%s t_pack_apply：%d 处不符\n", bad ? "✗" : "✓", bad); return bad != 0;
 }

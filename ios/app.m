@@ -632,8 +632,9 @@ static void library_play(const char *gid, void *ctx) {   // 主线程（s2a_shel
 //   库界面（S2ArmShellHost）经 s2a_shell.h 的这两个口问 / 报；这里是强定义，盖过 S2ArmShellBridge 里的弱缺省。判据同起局前的导入闸门（pack_apply.c s2a_import_state，
 //   按本款文档根 Documents/games/<游戏号>）：就绪或已拷到待解开（Play 后闸门解开）= 可开始；不在 / 不完整 = 库里「需要游戏数据」、点了给下面的说明
 static __weak UIWindow *g_lib_window;
-int s2a_import_state_game(const char *proc_docs, const char *gid);   // pack_apply.c
-static int game_pack_state(const char *gid) { char d[1024]; s2a_container_docs(d, sizeof d); return s2a_import_state_game(d, gid); }
+int s2a_import_state_game_quick(const char *proc_docs, const char *gid);   // pack_apply.c
+static int game_pack_state(const char *gid) { char d[1024]; s2a_container_docs(d, sizeof d); return s2a_import_state_game_quick(d, gid); }
+void s2a_shell_library_appeared(void) { static int once; if (!once++) BOOT_MARK("游戏库界面可操作"); }
 int s2a_shell_game_data_ready(const char *gid) {
     int st = game_pack_state(gid);
     return st == 0 || st == 1;   // S2A_IMPORT_READY / S2A_IMPORT_PENDING
